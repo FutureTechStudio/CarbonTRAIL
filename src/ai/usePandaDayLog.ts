@@ -242,7 +242,7 @@ export function usePandaDayLog(options: UsePandaDayLogOptions = {}) {
       });
 
       const merged = mergeAiFollowUpParse(parseForFollowUp, aiParse, text);
-      let nextParse =
+      const nextParse =
         merged.extractedActivities.length > 0
           ? applyCompletenessToParse(ensurePendingActivities(merged, profile), profile)
           : null;
