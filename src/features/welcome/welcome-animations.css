@@ -1,0 +1,101 @@
+/* Welcome landing — lightweight environmental micro-animations */
+
+@keyframes welcomeBirdDriftA {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(36px, -6px);
+  }
+}
+
+@keyframes welcomeBirdDriftB {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-28px, 5px);
+  }
+}
+
+@keyframes welcomeCloudDrift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(18px);
+  }
+}
+
+@keyframes welcomeCloudDriftReverse {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-14px);
+  }
+}
+
+@keyframes welcomeSmokeRise {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.38;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.48;
+  }
+}
+
+.welcome-bird-a {
+  animation: welcomeBirdDriftA 22s ease-in-out infinite;
+}
+
+.welcome-bird-b {
+  animation: welcomeBirdDriftB 28s ease-in-out infinite;
+}
+
+.welcome-bird-c {
+  animation: welcomeBirdDriftA 26s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+.welcome-bird-d {
+  animation: welcomeBirdDriftB 30s ease-in-out infinite;
+  animation-delay: -12s;
+}
+
+.welcome-cloud-drift-a {
+  animation: welcomeCloudDrift 48s ease-in-out infinite;
+}
+
+.welcome-cloud-drift-b {
+  animation: welcomeCloudDriftReverse 56s ease-in-out infinite;
+}
+
+.welcome-smoke-rise-a {
+  animation: welcomeSmokeRise 14s ease-in-out infinite;
+}
+
+.welcome-smoke-rise-b {
+  animation: welcomeSmokeRise 18s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-bird-a,
+  .welcome-bird-b,
+  .welcome-bird-c,
+  .welcome-bird-d,
+  .welcome-cloud-drift-a,
+  .welcome-cloud-drift-b,
+  .welcome-smoke-rise-a,
+  .welcome-smoke-rise-b {
+    animation: none !important;
+  }
+}

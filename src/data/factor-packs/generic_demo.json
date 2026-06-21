@@ -1,0 +1,56 @@
+{
+  "transport": {
+    "walk": 0,
+    "cycle": 0,
+    "scooter": 0.11,
+    "motorbike": 0.11,
+    "car": 0.17,
+    "carpool": 0.085,
+    "auto": 0.14,
+    "cab": 0.17,
+    "bus": 0.1,
+    "metro": 0.03,
+    "train": 0.03,
+    "flight": 0.18,
+    "ev": 0.03
+  },
+  "foodMeal": {
+    "plant_based": 0.5,
+    "vegetarian_low_dairy": 0.7,
+    "veg_dairy": 0.9,
+    "egg": 1.1,
+    "chicken_fish": 1.6,
+    "red_meat": 3.0,
+    "unknown": 1.1
+  },
+  "mealSourceAdjustments": {
+    "home_cooked": 0,
+    "packed": 0,
+    "canteen": 0.1,
+    "restaurant": 0.2,
+    "ordered_online": 0.35,
+    "skipped": 0
+  },
+  "packaging": {
+    "none": 0,
+    "minimal": 0.05,
+    "normal": 0.12,
+    "plastic_heavy": 0.25,
+    "unknown": 0.1
+  },
+  "electricity": {
+    "kgPerKwh": 0.13
+  },
+  "delivery": {
+    "groupedParcel": 0.12,
+    "foodDelivery": 0.22,
+    "quickCommerce": 0.18
+  },
+  "waste": {
+    "normalDaily": 0.2,
+    "plasticHeavy": 0.5,
+    "foodWasteSmall": 0.3,
+    "recycled": 0.05,
+    "composted": 0.03
+  }
+}

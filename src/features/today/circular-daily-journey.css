@@ -1,0 +1,810 @@
+.daily-ring-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.82), transparent 36%),
+    linear-gradient(145deg, rgba(253, 250, 244, 0.98), rgba(238, 245, 238, 0.88));
+  box-shadow: 0 24px 70px rgba(42, 54, 40, 0.12);
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.daily-ring-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: clamp(0.9rem, 2vw, 1.25rem);
+}
+
+.daily-ring-card__header--compact {
+  justify-content: flex-end;
+}
+
+.daily-ring-card__header h1 {
+  margin: 0;
+  color: #2a3628;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.daily-ring-card__header p {
+  margin: 0.25rem 0 0;
+  color: #6b7b6e;
+  font-size: 0.9rem;
+}
+
+.daily-ring-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.daily-ring-card__chips span {
+  border: 1px solid rgba(228, 237, 232, 0.95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #2a3628;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.45rem 0.7rem;
+  white-space: nowrap;
+}
+
+.daily-ring-card__date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -0.35rem 0 clamp(0.75rem, 1.5vw, 1rem);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(228, 237, 232, 0.95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.daily-ring-card__date-nav-label {
+  margin: 0;
+  color: #2a3628;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.daily-ring-card__date-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #2a3628;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.55rem;
+}
+
+.daily-ring-card__date-nav-btn:hover:not(:disabled) {
+  background: rgba(228, 239, 231, 0.85);
+}
+
+.daily-ring-card__date-nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.daily-ring-card__date-nav-btn:focus-visible {
+  outline: 2px solid #2d7a4f;
+  outline-offset: 2px;
+}
+
+.daily-ring-shell {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 2rem;
+  background:
+    radial-gradient(circle at 16% 24%, rgba(232, 238, 245, 0.42), transparent 20%),
+    radial-gradient(circle at 86% 24%, rgba(255, 224, 138, 0.45), transparent 22%),
+    radial-gradient(ellipse at 50% 58%, rgba(253, 250, 244, 0.62), transparent 42%),
+    linear-gradient(90deg, rgb(0 0 0) 0%, rgba(200, 216, 232, 0.56) 32%, rgba(223, 240, 224, 0.58) 58%, rgb(0 94 255 / 62%) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.daily-ring-shell::before,
+.daily-ring-shell::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.daily-ring-shell::before {
+  left: -8%;
+  right: -8%;
+  bottom: -10%;
+  height: 38%;
+  background:
+    radial-gradient(ellipse at 24% 82%, rgba(76, 175, 125, 0.36), transparent 24%),
+    radial-gradient(ellipse at 78% 76%, rgba(168, 213, 181, 0.42), transparent 28%),
+    linear-gradient(180deg, transparent 0%, rgba(184, 204, 148, 0.42) 38%, rgba(152, 172, 114, 0.32) 100%);
+  clip-path: polygon(0 38%, 18% 24%, 36% 35%, 56% 20%, 76% 34%, 100% 22%, 100% 100%, 0 100%);
+  opacity: 0.9;
+}
+
+.daily-ring-shell::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 86% 23%, rgba(255, 224, 138, 0.72) 0 4.5%, rgba(255, 216, 168, 0.2) 4.8% 10%, transparent 11%),
+    radial-gradient(circle at 12% 14%, rgba(255, 255, 255, 0.55) 0 0.35%, transparent 0.45%),
+    radial-gradient(circle at 19% 18%, rgba(255, 255, 255, 0.45) 0 0.28%, transparent 0.38%),
+    radial-gradient(circle at 9% 31%, rgba(255, 255, 255, 0.38) 0 0.32%, transparent 0.42%);
+  opacity: 0.82;
+}
+
+.daily-ring-map {
+  position: relative;
+  z-index: 1;
+  width: min(100%, clamp(20rem, 64vw, 46rem));
+  aspect-ratio: 1;
+  border-radius: 999px;
+  isolation: isolate;
+}
+
+.daily-ring-atmosphere {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.daily-ring-atmosphere--moon {
+  left: -7%;
+  top: 45%;
+  width: clamp(2.2rem, 5.8vw, 3.8rem);
+  height: clamp(2.2rem, 5.8vw, 3.8rem);
+  overflow: visible;
+  filter: drop-shadow(0 0 16px rgba(232, 238, 245, 0.48));
+}
+
+.daily-ring-atmosphere--sun {
+  right: -5%;
+  top: 18%;
+  width: clamp(4.2rem, 11vw, 7.4rem);
+  height: clamp(4.2rem, 11vw, 7.4rem);
+  background: radial-gradient(circle, rgba(255, 224, 138, 0.88), rgba(255, 216, 168, 0.38) 48%, transparent 72%);
+  box-shadow: 0 0 58px rgba(255, 216, 120, 0.48);
+}
+
+.daily-ring-map__sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 26% 28%, rgba(255, 255, 255, 0.22), transparent 18%),
+    radial-gradient(circle at 74% 28%, rgba(255, 224, 138, 0.34), transparent 18%),
+    radial-gradient(circle at 52% 82%, rgba(255, 224, 138, 0.3), transparent 17%),
+    conic-gradient(
+      from -90deg,
+      #243047 0deg,
+      #3d4b66 48deg,
+      #ffd7a2 86deg,
+      #dcefdc 143deg,
+      #a9d4df 196deg,
+      #f1b982 254deg,
+      #80617a 310deg,
+      #243047 360deg
+    );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), inset 0 18px 70px rgba(255, 255, 255, 0.24);
+}
+
+.daily-ring-map__sky::before {
+  content: "";
+  position: absolute;
+  inset: 30% 22%;
+  border-radius: 999px;
+  background: rgba(253, 250, 244, 0.86);
+  box-shadow: 0 0 45px rgba(255, 255, 255, 0.4);
+}
+
+.daily-ring-map__sky::after {
+  content: "";
+  position: absolute;
+  inset: auto 8% 6% 8%;
+  height: 32%;
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(ellipse at 25% 88%, rgba(76, 175, 125, 0.45), transparent 26%),
+    radial-gradient(ellipse at 70% 78%, rgba(168, 213, 181, 0.52), transparent 30%),
+    linear-gradient(180deg, transparent, rgba(113, 157, 104, 0.42));
+}
+
+.daily-ring-map__house,
+.daily-ring-map__tree {
+  position: absolute;
+  z-index: 1;
+  filter: drop-shadow(0 4px 10px rgba(42, 54, 40, 0.13));
+  pointer-events: none;
+}
+
+.daily-ring-map__house--night {
+  left: 10%;
+  top: 25%;
+  font-size: clamp(1rem, 3vw, 2rem);
+}
+
+.daily-ring-map__house--morning {
+  right: 10%;
+  top: 30%;
+  font-size: clamp(0.9rem, 2.6vw, 1.8rem);
+}
+
+.daily-ring-map__tree--left {
+  left: 14%;
+  bottom: 19%;
+  font-size: clamp(1rem, 2.8vw, 1.9rem);
+}
+
+.daily-ring-map__tree--bottom {
+  right: 22%;
+  bottom: 9%;
+  font-size: clamp(0.9rem, 2.4vw, 1.7rem);
+}
+
+.daily-ring-map__ring {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: visible;
+}
+
+.daily-ring-map__track-outer,
+.daily-ring-map__track-shadow,
+.daily-ring-map__track,
+.daily-ring-map__progress {
+  fill: none;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.daily-ring-map__track-outer {
+  stroke: rgba(122, 92, 58, 0.34);
+  stroke-width: 48;
+}
+
+.daily-ring-map__track-shadow {
+  stroke: rgba(253, 250, 244, 0.9);
+  stroke-width: 38;
+}
+
+.daily-ring-map__track {
+  stroke: rgba(196, 168, 130, 0.92);
+  stroke-width: 24;
+}
+
+.daily-ring-map__progress {
+  stroke: rgba(45, 122, 79, 0.32);
+  stroke-width: 24;
+  stroke-dashoffset: calc(1583.36 - var(--ring-progress));
+}
+
+.daily-ring-map__arrow {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.daily-ring-time {
+  position: absolute;
+  z-index: 5;
+  color: #2a3628;
+  font-size: clamp(0.62rem, 1.6vw, 0.85rem);
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(246, 242, 223, 0.78), rgba(188, 198, 204, 0.66));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), 0 4px 12px rgba(42, 54, 40, 0.1);
+  padding: 0.22rem 0.52rem;
+  backdrop-filter: blur(4px);
+}
+
+.daily-ring-time--top {
+  top: 2.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #111;
+  background: linear-gradient(135deg, rgba(248, 244, 228, 0.92), rgba(181, 193, 202, 0.78));
+}
+
+.daily-ring-time--right {
+  right: 3.5%;
+  top: 49%;
+}
+
+.daily-ring-time--bottom {
+  bottom: 2.5%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.daily-ring-time--left {
+  left: 3.5%;
+  top: 49%;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(45, 53, 68, 0.9), rgba(132, 142, 154, 0.62));
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.daily-ring-node {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  width: clamp(4.25rem, 9vw, 5.5rem);
+  height: clamp(4.25rem, 9vw, 5.5rem);
+  transform: translate(-50%, -50%);
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #2a3628;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  padding: 0;
+  text-align: center;
+}
+
+.daily-ring-node__hit {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.daily-ring-node__bubble {
+  position: relative;
+  display: grid;
+  width: clamp(2.85rem, 7vw, 4rem);
+  height: clamp(2.85rem, 7vw, 4rem);
+  place-items: center;
+  border: 3.5px solid #2d7a4f;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 24px rgba(42, 54, 40, 0.14);
+  font-size: clamp(1rem, 2.8vw, 1.55rem);
+}
+
+.daily-ring-node__icons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  line-height: 1;
+}
+
+.daily-ring-node__icons span {
+  margin-left: -0.18rem;
+}
+
+.daily-ring-node__icons span:first-child {
+  margin-left: 0;
+}
+
+.daily-ring-node__empty-icon {
+  color: #8a9a8a;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.daily-ring-node__status {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.1rem;
+  display: grid;
+  width: 1.12rem;
+  height: 1.12rem;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #2d7a4f;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.daily-ring-node--assumed .daily-ring-node__bubble {
+  border-color: #e8923a;
+}
+
+.daily-ring-node--assumed .daily-ring-node__status {
+  background: #e8923a;
+}
+
+.daily-ring-node--predicted .daily-ring-node__bubble {
+  border-color: #7bb8d4;
+  border-style: dashed;
+}
+
+.daily-ring-node--predicted .daily-ring-node__status {
+  background: #7bb8d4;
+}
+
+.daily-ring-node--estimated {
+  opacity: 0.72;
+}
+
+.daily-ring-node--estimated .daily-ring-node__bubble {
+  border-color: #c4bdb0;
+  border-style: dashed;
+}
+
+.daily-ring-node--estimated .daily-ring-node__status {
+  background: #c4bdb0;
+}
+
+.daily-ring-node--mixed .daily-ring-node__bubble {
+  border-color: #2d7a4f;
+  box-shadow: inset 0 0 0 3px rgba(232, 146, 58, 0.24), 0 10px 24px rgba(42, 54, 40, 0.14);
+}
+
+.daily-ring-node--mixed .daily-ring-node__status {
+  background: #e8923a;
+}
+
+.daily-ring-node--empty {
+  opacity: 0.74;
+}
+
+.daily-ring-node--empty .daily-ring-node__bubble {
+  border-color: rgba(196, 189, 176, 0.78);
+  border-width: 2px;
+}
+
+.daily-ring-node--empty .daily-ring-node__status {
+  display: none;
+}
+
+.daily-ring-node--missing .daily-ring-node__bubble {
+  border-color: #c4bdb0;
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.daily-ring-node--selected .daily-ring-node__hit {
+  background: radial-gradient(circle, rgba(45, 122, 79, 0.18), transparent 68%);
+}
+
+.daily-ring-node--selected .daily-ring-node__bubble {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 5px rgba(45, 122, 79, 0.16), 0 14px 30px rgba(42, 54, 40, 0.18);
+}
+
+.daily-ring-node--missing .daily-ring-node__status {
+  background: #fdfaf4;
+  color: #6b7b6e;
+  border-color: #c4bdb0;
+}
+
+.daily-ring-node--heavy_smoke::before,
+.daily-ring-node--light_smoke::before {
+  content: "";
+  position: absolute;
+  top: 4%;
+  left: 12%;
+  width: 68%;
+  height: 38%;
+  border-radius: 999px;
+  background: rgba(176, 168, 152, 0.32);
+  filter: blur(9px);
+  z-index: -1;
+}
+
+.daily-ring-node--light_smoke::before {
+  opacity: 0.45;
+}
+
+.daily-ring-node--green_trail::after,
+.daily-ring-node--green_food::after {
+  content: "";
+  position: absolute;
+  bottom: 30%;
+  width: 58%;
+  height: 24%;
+  border-radius: 999px;
+  background: rgba(168, 213, 181, 0.45);
+  z-index: -1;
+}
+
+.daily-ring-node--parcel::after {
+  content: "▣";
+  position: absolute;
+  right: 8%;
+  top: 23%;
+  color: rgba(122, 92, 58, 0.6);
+  font-size: 0.72rem;
+}
+
+.daily-ring-node:focus-visible {
+  outline: 3px solid #2d7a4f;
+  outline-offset: 5px;
+  border-radius: 1rem;
+}
+
+.daily-ring-center {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  width: clamp(10.5rem, 28vw, 16.25rem);
+  min-height: clamp(10.5rem, 28vw, 16.25rem);
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(253, 250, 244, 0.94);
+  box-shadow: 0 16px 50px rgba(42, 54, 40, 0.16);
+  color: #2a3628;
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+  text-align: center;
+}
+
+.daily-ring-center__leaf {
+  font-size: clamp(1rem, 2.6vw, 1.5rem);
+  opacity: 0.72;
+}
+
+.daily-ring-center__title {
+  margin: 0.15rem 0 0;
+  font-size: clamp(0.85rem, 2vw, 1.1rem);
+  font-weight: 850;
+}
+
+.daily-ring-center__value {
+  margin: 0.2rem 0 0;
+  color: #2d7a4f;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(1.6rem, 4.6vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.daily-ring-center__value span {
+  color: #2a3628;
+  font-size: 0.45em;
+  font-weight: 800;
+}
+
+.daily-ring-center__sub {
+  margin: 0.2rem 0 0;
+  color: #6b7b6e;
+  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.daily-ring-center__sub--very-low {
+  color: #2d7a4f;
+}
+
+.daily-ring-center__sub--low {
+  color: #4caf7d;
+}
+
+.daily-ring-center__sub--moderate {
+  color: #7a5c3a;
+}
+
+.daily-ring-center__sub--high {
+  color: #c86a2a;
+}
+
+.daily-ring-center__sub--very-high {
+  color: #a33a2a;
+}
+
+.daily-ring-center__divider {
+  width: 72%;
+  height: 1px;
+  margin: 0.65rem 0;
+  background: rgba(212, 200, 184, 0.7);
+}
+
+.daily-ring-center__stats {
+  display: grid;
+  width: 86%;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.daily-ring-center__stats span {
+  display: grid;
+  color: #6b7b6e;
+  font-size: clamp(0.56rem, 1.4vw, 0.68rem);
+  line-height: 1.15;
+}
+
+.daily-ring-center__stats strong {
+  color: #2a3628;
+  font-size: clamp(0.85rem, 2vw, 1.1rem);
+}
+
+.daily-ring-center__next {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  color: #6b7b6e;
+  font-size: clamp(0.58rem, 1.4vw, 0.7rem);
+  text-align: left;
+}
+
+.daily-ring-center__next span:last-child {
+  display: grid;
+}
+
+.daily-ring-center__next strong {
+  color: #b86a10;
+  font-size: 1.05em;
+}
+
+.daily-ring-center__button {
+  margin-top: 0.65rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: #2d7a4f;
+  color: #fff;
+  cursor: pointer;
+  font-size: clamp(0.68rem, 1.6vw, 0.82rem);
+  font-weight: 800;
+  padding: 0.6rem 1rem;
+}
+
+.daily-ring-avatar {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  width: clamp(2.3rem, 6vw, 3.4rem);
+  height: clamp(2.3rem, 6vw, 3.4rem);
+  transform: translate(-50%, -50%);
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #7bb8d4;
+  box-shadow: 0 12px 28px rgba(42, 54, 40, 0.2);
+  pointer-events: none;
+}
+
+.daily-ring-avatar__face {
+  font-size: clamp(1.2rem, 3vw, 1.9rem);
+}
+
+.daily-ring-impact-chart {
+  margin-top: clamp(0.75rem, 1.5vw, 1rem);
+}
+
+.daily-ring-impact-chart__plot {
+  position: relative;
+  height: clamp(5.5rem, 14vw, 7rem);
+  border: 1px solid rgba(228, 237, 232, 0.95);
+  border-radius: 1.1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(228, 239, 231, 0.44));
+  padding: 0.85rem 0.75rem 1.65rem;
+}
+
+.daily-ring-impact-chart__grid,
+.daily-ring-impact-chart__bars {
+  position: absolute;
+  inset: 0.85rem 0.75rem 1.65rem;
+}
+
+.daily-ring-impact-chart__hline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(42, 54, 40, 0.08);
+}
+
+.daily-ring-impact-chart__vline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid rgba(42, 54, 40, 0.08);
+}
+
+.daily-ring-impact-chart__bar {
+  position: absolute;
+  bottom: 0;
+  width: 0.45rem;
+  transform: translateX(-50%);
+  border-radius: 999px 999px 0 0;
+  box-shadow: 0 2px 8px rgba(42, 54, 40, 0.12);
+}
+
+.daily-ring-impact-chart__axis {
+  position: absolute;
+  inset: auto 0.75rem 0.45rem;
+  display: flex;
+  justify-content: space-between;
+  color: #2a3628;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.daily-ring-impact-chart__axis span {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .daily-ring-avatar {
+    animation: dailyRingBob 2.8s ease-in-out infinite;
+  }
+}
+
+@keyframes dailyRingBob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  50% {
+    transform: translate(-50%, calc(-50% - 5px));
+  }
+}
+
+@media (max-width: 640px) {
+  .daily-ring-card {
+    padding: 0.9rem;
+    border-radius: 1.35rem;
+  }
+
+  .daily-ring-card__header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .daily-ring-card__chips {
+    justify-content: flex-start;
+  }
+
+  .daily-ring-map {
+    width: min(100%, 92vw);
+  }
+
+  .daily-ring-node {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .daily-ring-atmosphere--moon {
+    left: -8%;
+    top: 18%;
+  }
+
+  .daily-ring-atmosphere--sun {
+    right: -10%;
+    top: 20%;
+  }
+
+  .daily-ring-center__next {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-ring-avatar {
+    animation: none;
+  }
+}

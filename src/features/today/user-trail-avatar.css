@@ -1,0 +1,54 @@
+.user-trail-avatar__ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+  border: 2px solid rgba(45, 122, 79, 0.35);
+}
+
+.user-trail-avatar__figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.user-trail-avatar__head {
+  display: block;
+  height: 9px;
+  width: 9px;
+  border-radius: 9999px;
+  border: 1.5px solid #2a3628;
+  box-shadow: 0 1px 4px rgba(42, 54, 40, 0.15);
+}
+
+.user-trail-avatar__torso {
+  display: block;
+  margin-top: 1px;
+  height: 10px;
+  width: 10px;
+  border-radius: 9999px 9999px 4px 4px;
+  border: 1.5px solid #2a3628;
+  box-shadow: 0 2px 6px rgba(42, 54, 40, 0.16);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .user-trail-avatar {
+    animation: userTrailBob 2.8s ease-in-out infinite;
+  }
+}
+
+@keyframes userTrailBob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  50% {
+    transform: translate(-50%, calc(-50% - 4px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-trail-avatar {
+    animation: none;
+  }
+}
