@@ -80,7 +80,7 @@ async function callMistral(apiKey: string, model: string, systemPrompt: string, 
     return {
       ok: false as const,
       status: response.status,
-      error: payload?.error?.message ?? `Mistral API error (${response.status}). Check VITE_MISTRAL_API_KEY.`,
+      error: payload?.error?.message ?? `Mistral API error (${response.status}). Check MISTRAL_API_KEY.`,
     };
   }
 
@@ -94,9 +94,9 @@ async function callMistral(apiKey: string, model: string, systemPrompt: string, 
 
 function missingKeyMessage(provider: AiProxyProvider): string {
   if (provider === "mistral") {
-    return "VITE_MISTRAL_API_KEY is not set. Add it to .env.local and restart the dev server.";
+    return "MISTRAL_API_KEY is not set. Add it to .env.local (server-side only) and restart the dev server.";
   }
-  return "VITE_GEMINI_API_KEY is not set. Add it to .env.local and restart the dev server.";
+  return "GEMINI_API_KEY is not set. Add it to .env.local (server-side only) and restart the dev server.";
 }
 
 function attachAiProxy(middlewares: Connect.Server, options: AiProxyOptions) {

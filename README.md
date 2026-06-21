@@ -40,34 +40,34 @@ Panda uses **Carbon Memory** when details are missing and marks assumed/predicte
 
 **Green Impact** separately estimates CO₂ saved compared to the user's usual routine.
 
-## Optional Gemini integration
+## Optional Gemini / Mistral integration
 Panda AI works fully **without** an API key using the local rule-based parser.
 
-To enable Gemini or Mistral for richer parsing (demo/local only):
+To enable cloud parsing, keep API keys **server-side only**. The browser calls `/api/panda/parse`; the Vite dev server (or your production backend) holds the key.
 
 1. Copy `.env.example` to `.env.local`
-2. Set **Gemini**:
-   ```bash
-   VITE_AI_MODE=gemini
-   VITE_GEMINI_API_KEY=your_key_here
-   VITE_GEMINI_MODEL=gemini-2.0-flash
-   ```
-   Or **Mistral**:
+2. **Mistral (local dev):**
    ```bash
    VITE_AI_MODE=mistral
-   VITE_MISTRAL_API_KEY=your_key_here
    VITE_MISTRAL_MODEL=mistral-small-latest
+   MISTRAL_API_KEY=your_key_here
    ```
+   Or **Gemini (local dev):**
+   ```bash
+   VITE_AI_MODE=gemini
+   VITE_GEMINI_MODEL=gemini-2.0-flash
+   GEMINI_API_KEY=your_key_here
+   ```
+3. Run `npm run dev` — requests go through the built-in Vite proxy (keys never enter the browser bundle).
 
-**Security warning:** Direct frontend API keys are visible in the browser bundle. Use them only for local/demo development. For production, use a backend or serverless proxy:
-
+**Production:** deploy a backend or serverless function at `/api/panda/parse` and set:
 ```bash
 VITE_AI_PROXY_URL=/api/panda/parse
-GEMINI_API_KEY=your_key_here   # server-side only
-MISTRAL_API_KEY=your_key_here  # server-side only
+MISTRAL_API_KEY=your_key_here   # server environment only
+# or GEMINI_API_KEY=your_key_here
 ```
 
-Never commit `.env`, `.env.local`, or real API keys.
+Never commit `.env`, `.env.local`, or real API keys. Do **not** use `VITE_GEMINI_API_KEY` or `VITE_MISTRAL_API_KEY` — those expose keys in the client bundle.
 
 ### How parsing works
 `parsePandaMessage(message, context)` in `src/ai/pandaAiService.ts`:

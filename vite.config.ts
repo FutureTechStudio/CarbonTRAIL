@@ -7,13 +7,12 @@ import { pandaGeminiProxyPlugin } from "./vite.pandaGeminiProxy";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const aiMode = env.VITE_AI_MODE ?? "local";
-  const geminiKey = env.VITE_GEMINI_API_KEY;
-  const geminiModel = env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
-  const mistralKey = env.VITE_MISTRAL_API_KEY;
-  const mistralModel = env.VITE_MISTRAL_MODEL || "mistral-small-latest";
+  const geminiKey = env.GEMINI_API_KEY;
+  const mistralKey = env.MISTRAL_API_KEY;
+  const geminiModel = env.GEMINI_MODEL || env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
+  const mistralModel = env.MISTRAL_MODEL || env.VITE_MISTRAL_MODEL || "mistral-small-latest";
   const useAiProxy =
     aiMode !== "local" &&
-    !env.VITE_AI_PROXY_URL &&
     ((aiMode === "gemini" && Boolean(geminiKey)) || (aiMode === "mistral" && Boolean(mistralKey)));
 
   const proxyProvider = aiMode === "mistral" ? "mistral" : "gemini";

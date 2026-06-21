@@ -1,5 +1,4 @@
 import {
-  AI_CONFIG,
   getAiParseUrl,
   getAiProvider,
   isRemoteAiEnabled,
@@ -47,124 +46,8 @@ function providerLabel(provider: AiProvider): string {
   return "AI";
 }
 
-async function callMistralDirect(
-  message: string,
-  context: PandaContext,
-  systemPrompt: string,
-  userPrompt: string,
-): Promise<RemoteCallResult> {
-  if (!AI_CONFIG.mistralApiKey) {
-    return { result: null, error: "No Mistral API key configured." };
-  }
-
-  try {
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${AI_CONFIG.mistralApiKey}`,
-      },
-      body: JSON.stringify({
-        model: AI_CONFIG.mistralModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-      }),
-    });
-
-    if (!response.ok) {
-      let errorText = `Mistral API error (${response.status})`;
-      try {
-        const payload = await response.json();
-        errorText = payload?.error?.message ?? errorText;
-      } catch {
-        /* ignore */
-      }
-      return { result: null, error: errorText };
-    }
-
-    const payload = await response.json();
-    const text = payload?.choices?.[0]?.message?.content;
-    if (!text) {
-      return { result: null, error: "Mistral returned an empty response." };
-    }
-
-    const parsed = extractJsonFromAiText(text);
-    const validated = validatePandaParseResult(parsed, "mistral", message);
-    if (!validated) {
-      return { result: null, error: "Mistral returned JSON that failed validation." };
-    }
-    return { result: validated };
-  } catch (error) {
-    return {
-      result: null,
-      error: error instanceof Error ? error.message : "Mistral request failed.",
-    };
-  }
-}
-
-async function callGeminiDirect(
-  message: string,
-  systemPrompt: string,
-  userPrompt: string,
-): Promise<RemoteCallResult> {
-  if (!AI_CONFIG.geminiApiKey) {
-    return { result: null, error: "No Gemini API key configured." };
-  }
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.geminiModel}:generateContent?key=${AI_CONFIG.geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.2,
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      let errorText = `Gemini API error (${response.status})`;
-      try {
-        const payload = await response.json();
-        errorText = payload?.error?.message ?? errorText;
-      } catch {
-        /* ignore */
-      }
-      return { result: null, error: errorText };
-    }
-
-    const payload = await response.json();
-    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      return { result: null, error: "Gemini returned an empty response." };
-    }
-
-    const parsed = extractJsonFromAiText(text);
-    const validated = validatePandaParseResult(parsed, "gemini", message);
-    if (!validated) {
-      return { result: null, error: "Gemini returned JSON that failed validation." };
-    }
-    return { result: validated };
-  } catch (error) {
-    return {
-      result: null,
-      error: error instanceof Error ? error.message : "Gemini request failed.",
-    };
-  }
+function proxyNotConfiguredError(provider: AiProvider): string {
+  return `${providerLabel(provider)} proxy is not configured. Set MISTRAL_API_KEY or GEMINI_API_KEY in .env.local for dev, or VITE_AI_PROXY_URL for production.`;
 }
 
 async function callRemoteJson(
@@ -179,72 +62,22 @@ async function callRemoteJson(
   }
 
   const proxyUrl = getAiParseUrl();
+  if (!proxyUrl) {
+    return { result: null, error: proxyNotConfiguredError(provider) };
+  }
 
   try {
-    if (proxyUrl) {
-      const response = await fetch(proxyUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, context, systemPrompt, userPrompt }),
-      });
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, context, systemPrompt, userPrompt }),
+    });
 
-      if (!response.ok) {
-        return { result: null, error: `${providerLabel(provider)} proxy error (${response.status})` };
-      }
-
-      const text = await response.text();
-      return { result: extractJsonFromAiText(text) };
+    if (!response.ok) {
+      return { result: null, error: `${providerLabel(provider)} proxy error (${response.status})` };
     }
 
-    if (provider === "mistral") {
-      if (!AI_CONFIG.mistralApiKey) return { result: null, error: "No Mistral API key configured." };
-      const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${AI_CONFIG.mistralApiKey}`,
-        },
-        body: JSON.stringify({
-          model: AI_CONFIG.mistralModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-        }),
-      });
-      if (!response.ok) return { result: null, error: `Mistral API error (${response.status})` };
-      const payload = await response.json();
-      const text = payload?.choices?.[0]?.message?.content;
-      if (!text) return { result: null, error: "Mistral returned an empty response." };
-      return { result: extractJsonFromAiText(text) };
-    }
-
-    if (!AI_CONFIG.geminiApiKey) return { result: null, error: "No Gemini API key configured." };
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.geminiModel}:generateContent?key=${AI_CONFIG.geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.2,
-          },
-        }),
-      },
-    );
-    if (!response.ok) return { result: null, error: `Gemini API error (${response.status})` };
-    const payload = await response.json();
-    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return { result: null, error: "Gemini returned an empty response." };
+    const text = await response.text();
     return { result: extractJsonFromAiText(text) };
   } catch (error) {
     return {
@@ -263,40 +96,35 @@ async function callRemoteAi(message: string, context: PandaContext): Promise<Rem
   const systemPrompt = buildPandaSystemPrompt();
   const userPrompt = buildPandaUserPrompt(message, context);
   const proxyUrl = getAiParseUrl();
+  if (!proxyUrl) {
+    return { result: null, error: proxyNotConfiguredError(provider) };
+  }
 
   try {
-    if (proxyUrl) {
-      const response = await fetch(proxyUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, context, systemPrompt, userPrompt }),
-      });
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, context, systemPrompt, userPrompt }),
+    });
 
-      if (!response.ok) {
-        let errorText = `${providerLabel(provider)} proxy error (${response.status})`;
-        try {
-          const errJson = await response.json();
-          if (errJson?.error) errorText = String(errJson.error);
-        } catch {
-          /* ignore */
-        }
-        return { result: null, error: errorText };
+    if (!response.ok) {
+      let errorText = `${providerLabel(provider)} proxy error (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (errJson?.error) errorText = String(errJson.error);
+      } catch {
+        /* ignore */
       }
-
-      const text = await response.text();
-      const parsed = extractJsonFromAiText(text);
-      const validated = validatePandaParseResult(parsed, provider, message);
-      if (!validated) {
-        return { result: null, error: `${providerLabel(provider)} returned JSON that failed validation.` };
-      }
-      return { result: validated };
+      return { result: null, error: errorText };
     }
 
-    if (provider === "mistral") {
-      return callMistralDirect(message, context, systemPrompt, userPrompt);
+    const text = await response.text();
+    const parsed = extractJsonFromAiText(text);
+    const validated = validatePandaParseResult(parsed, provider, message);
+    if (!validated) {
+      return { result: null, error: `${providerLabel(provider)} returned JSON that failed validation.` };
     }
-
-    return callGeminiDirect(message, systemPrompt, userPrompt);
+    return { result: validated };
   } catch (error) {
     return {
       result: null,
