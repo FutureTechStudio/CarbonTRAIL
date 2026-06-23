@@ -34,6 +34,18 @@ function eventStatus(activity: ActivityEntry): Exclude<TimeCheckpointStatus, "mi
   return "estimated";
 }
 
+export function isPredictedActivity(activity: ActivityEntry): boolean {
+  return activity.status === "parsed_pending";
+}
+
+export function isEstimatedActivity(activity: ActivityEntry): boolean {
+  return activity.status === "estimated_from_profile";
+}
+
+export function needsActivityConfirmation(activity: ActivityEntry): boolean {
+  return isPredictedActivity(activity) || isEstimatedActivity(activity);
+}
+
 function checkpointStatus(events: ActivityEntry[], expectedEventTypes: ExpectedEventType[]): TimeCheckpointStatus {
   if (events.length === 0) return expectedEventTypes.length > 0 ? "missing" : "empty";
 

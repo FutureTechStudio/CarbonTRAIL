@@ -18,19 +18,20 @@ const WELCOME_STATS = [
 const FLOATING_QUOTES = [
   {
     text: "Every choice leaves a mark on the Earth.",
-    className: "left-[3%] top-[10%] sm:left-[5%] sm:top-[9%]",
+    className: "left-[3%] top-[4%] sm:left-[5%] sm:top-[9%]",
     drift: "welcome-cloud-drift-a",
     rotate: "-rotate-1",
   },
   {
     text: "What we protect today can bloom tomorrow.",
-    className: "right-[2%] top-[18%] sm:right-[6%] sm:top-[14%]",
+    className: "right-[4%] top-[6%] sm:right-[6%] sm:top-[14%]",
     drift: "welcome-cloud-drift-b",
     rotate: "rotate-1",
   },
   {
     text: "Cleaner habits create clearer horizons.",
-    className: "bottom-[24%] left-[4%] sm:bottom-[20%] sm:left-auto sm:right-[5%]",
+    className:
+      "max-sm:hidden bottom-[28%] left-[4%] sm:bottom-[20%] sm:left-auto sm:right-[5%]",
     drift: "welcome-cloud-drift-a",
     rotate: "-rotate-2 sm:rotate-1",
   },
@@ -51,7 +52,7 @@ function QuoteCloud({ text }: { text: string }) {
         <ellipse cx={160} cy={38} rx={132} ry={15} fill="rgba(248,252,250,0.88)" />
       </svg>
       <figcaption
-        className="relative whitespace-nowrap px-4 py-2 text-[11px] italic leading-none sm:px-5 sm:py-2.5 sm:text-xs"
+        className="relative max-w-[min(88vw,240px)] px-4 py-2 text-center text-[11px] italic leading-snug sm:max-w-none sm:whitespace-nowrap sm:px-5 sm:py-2.5 sm:text-xs sm:leading-none"
         style={{ color: P.mutedText, fontFamily: "DM Sans, sans-serif" }}
       >
         {text}
@@ -62,7 +63,7 @@ function QuoteCloud({ text }: { text: string }) {
 
 function FloatingQuoteClouds() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-label="Environmental quotes">
+    <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-label="Environmental quotes">
       {FLOATING_QUOTES.map((quote) => (
         <div
           key={quote.text}

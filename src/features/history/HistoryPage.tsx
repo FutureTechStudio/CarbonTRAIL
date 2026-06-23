@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Leaf, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { analyzeHistoryPeriod } from "@/ai/historyPandaAnalysis";
 import { useGuest } from "@/app/providers";
 import { DailyTrailView } from "@/features/today/DailyTrailView";
 import { formatViewDateLabel, parseOptionalDateSearchParam } from "@/features/today/todayDateView";
@@ -20,15 +21,23 @@ import {
 } from "@/features/history/historyModel";
 import {
   buildHistoryInsights,
-  buildPandaHistoryPrompt,
   buildYearInsights,
 } from "@/features/history/historyInsights";
 import { getDailyFootprintLevel } from "@/logic/dailyFootprintLevel";
-import { P, PAGE_SHELL } from "@/theme/palette";
+import { P } from "@/theme/palette";
 
 const DISPLAY_FONT = "Plus Jakarta Sans, sans-serif";
-const HISTORY_PAGE_SHELL = `${PAGE_SHELL} space-y-5 px-4 py-5 pb-24 sm:px-5 lg:px-6 lg:pb-8 xl:px-8`;
-const DASHBOARD_GRID = "grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.75fr)] xl:items-stretch";
+const HISTORY_PAGE_SHELL =
+  "mx-auto w-full min-w-0 max-w-full space-y-4 px-4 pb-24 pt-4 lg:max-w-[1440px] lg:px-6 lg:pb-8";
+const DASHBOARD_GRID =
+  "grid w-full min-w-0 max-w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.75fr)] xl:items-stretch";
+const HISTORY_PAGE_FRAME = "relative min-h-full w-full min-w-0 max-w-full overflow-x-hidden";
+
+type PandaAnalysisState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; insights: string[]; source: "ai" | "local" }
+  | { status: "error"; message: string };
 
 function footprintImpactLabel(totalKg: number): string {
   return getDailyFootprintLevel(totalKg).label;
@@ -80,11 +89,11 @@ function SummaryCard({
 
   return (
     <article
-      className="flex h-full min-h-[118px] flex-col rounded-[1.25rem] border p-4"
+      className="flex h-full w-full min-h-[108px] min-w-0 flex-col rounded-[1.25rem] border p-3.5 sm:min-h-[118px] sm:p-4"
       style={{ background: tones.bg, borderColor: tones.border }}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: P.faintText }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs" style={{ color: P.faintText }}>
           {title}
         </p>
         <span className="shrink-0 text-base" aria-hidden="true">
@@ -92,12 +101,12 @@ function SummaryCard({
         </span>
       </div>
       <p
-        className="flex flex-1 items-center py-1 text-lg font-extrabold sm:text-xl"
+        className="flex flex-1 items-center break-words py-1 text-base font-extrabold leading-tight sm:text-lg lg:text-xl"
         style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}
       >
         {value}
       </p>
-      <p className="text-[11px] leading-snug" style={{ color: P.mutedText }}>
+      <p className="text-[10px] leading-snug sm:text-[11px]" style={{ color: P.mutedText }}>
         {helper}
       </p>
     </article>
@@ -113,7 +122,7 @@ function ViewSwitcher({ view, onChange }: { view: HistoryView; onChange: (view: 
 
   return (
     <div
-      className="inline-flex rounded-full border p-1"
+      className="flex w-full min-w-0 rounded-full border p-1 lg:inline-flex lg:w-auto"
       style={{ background: "rgba(255,255,255,0.55)", borderColor: P.border }}
       role="group"
       aria-label="History view"
@@ -124,7 +133,7 @@ function ViewSwitcher({ view, onChange }: { view: HistoryView; onChange: (view: 
           type="button"
           aria-pressed={view === option.id}
           onClick={() => onChange(option.id)}
-          className="rounded-full px-4 py-1.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="flex-1 rounded-full px-3 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-1.5 lg:flex-none"
           style={{
             background: view === option.id ? P.green : "transparent",
             color: view === option.id ? "#fff" : P.mutedText,
@@ -156,7 +165,7 @@ function DateNavigation({
 
   return (
     <div
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[1.25rem] border px-4 py-2 sm:px-5"
+      className="flex w-full min-w-0 items-center gap-2 rounded-[1.25rem] border px-3 py-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-5"
       style={{ borderColor: P.border, background: P.card }}
       aria-label="History period navigation"
     >
@@ -164,21 +173,24 @@ function DateNavigation({
         type="button"
         onClick={onPrevious}
         aria-label={prevLabel}
-        className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2"
         style={{ color: P.charcoal, outlineColor: P.green }}
       >
         <ChevronLeft size={16} aria-hidden="true" />
         <span className="hidden sm:inline">{prevLabel.replace("Previous ", "← Previous ")}</span>
         <span className="sm:hidden">Prev</span>
       </button>
-      <p className="truncate text-center text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
+      <p
+        className="min-w-0 flex-1 truncate px-1 text-center text-xs font-bold sm:px-0 sm:text-sm"
+        style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}
+      >
         {label}
       </p>
       <button
         type="button"
         onClick={onNext}
         aria-label={nextLabel}
-        className="inline-flex items-center justify-self-end gap-1 rounded-full px-2 py-1.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:justify-self-end sm:px-2"
         style={{ color: P.charcoal, outlineColor: P.green }}
       >
         <span className="hidden sm:inline">{nextLabel.replace("Next ", "Next ")} →</span>
@@ -192,12 +204,10 @@ function DateNavigation({
 function WeekDayCard({
   snapshot,
   onSelect,
-  layout = "scroll",
   isToday = false,
 }: {
   snapshot: HistoryDaySnapshot;
   onSelect: (snapshot: HistoryDaySnapshot) => void;
-  layout?: "grid" | "scroll";
   isToday?: boolean;
 }) {
   const date = parseDateKey(snapshot.date);
@@ -211,9 +221,7 @@ function WeekDayCard({
     <button
       type="button"
       onClick={() => onSelect(snapshot)}
-      className={`rounded-[1.15rem] border p-3 text-left transition hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-        layout === "grid" ? "h-full min-w-0 w-full" : "min-w-[9.5rem] shrink-0"
-      }`}
+      className="min-w-[8.5rem] shrink-0 snap-start rounded-[1.15rem] border p-3 text-left transition hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 xl:min-w-0 xl:w-full"
       style={{
         background: styles.background,
         borderColor: isToday ? P.green : hasData ? `${P.green}55` : styles.border,
@@ -266,25 +274,13 @@ function WeekDayCards({
   onSelect: (snapshot: HistoryDaySnapshot) => void;
 }) {
   return (
-    <section aria-label="Weekly day selector">
-      <div className="hidden gap-3 lg:grid lg:grid-cols-7">
+    <section className="w-full max-w-full min-w-0 overflow-hidden" aria-label="Weekly day selector">
+      <div className="-mx-1 flex w-0 min-w-full gap-3 overflow-x-auto overscroll-x-contain px-1 pb-1 xl:grid xl:w-full xl:min-w-0 xl:grid-cols-7 xl:overflow-visible xl:px-0">
         {snapshots.map((snapshot) => (
           <WeekDayCard
             key={snapshot.date}
             snapshot={snapshot}
             onSelect={onSelect}
-            layout="grid"
-            isToday={snapshot.date === todayDate}
-          />
-        ))}
-      </div>
-      <div className="lg:hidden -mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
-        {snapshots.map((snapshot) => (
-          <WeekDayCard
-            key={snapshot.date}
-            snapshot={snapshot}
-            onSelect={onSelect}
-            layout="scroll"
             isToday={snapshot.date === todayDate}
           />
         ))}
@@ -328,7 +324,7 @@ function WeekTrendChart({ summary }: { summary: HistoryPeriodSummary }) {
 
   return (
     <div
-      className="flex h-full min-h-[240px] flex-col rounded-[1.25rem] border p-4 xl:min-h-[340px]"
+      className="flex w-full min-w-0 flex-col rounded-[1.25rem] border p-4 xl:h-full xl:min-h-[340px]"
       style={{ borderColor: P.border, background: P.card }}
     >
       <p className="text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
@@ -342,10 +338,10 @@ function WeekTrendChart({ summary }: { summary: HistoryPeriodSummary }) {
           {sparseMessage}
         </p>
       ) : null}
-      <div className="mt-4 flex min-h-[160px] flex-1 flex-col xl:min-h-[180px]">
+      <div className="mt-4 min-h-[180px] w-full flex-1">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="h-full min-h-[160px] w-full flex-1 xl:min-h-[180px]"
+          className="h-full min-h-[180px] w-full"
           role="img"
           aria-label="Weekly CO₂ trend"
           preserveAspectRatio="none"
@@ -398,7 +394,7 @@ function WeekTrendChart({ summary }: { summary: HistoryPeriodSummary }) {
         </div>
       </div>
       <div
-        className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-[11px]"
+        className="mt-auto flex flex-col gap-1 border-t pt-3 text-[10px] sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-1 sm:text-[11px]"
         style={{ borderColor: P.border, color: P.mutedText }}
       >
         {summary.bestDay ? (
@@ -423,17 +419,18 @@ function MonthCalendar({ summary, onSelectDay }: { summary: HistoryPeriodSummary
   const leadingEmpty = (firstDay.getDay() + 6) % 7;
 
   return (
-    <div className="rounded-[1.25rem] border p-4" style={{ borderColor: P.border, background: P.card }}>
+    <div className="w-full min-w-0 rounded-[1.25rem] border p-4" style={{ borderColor: P.border, background: P.card }}>
       <p className="text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
         Monthly carbon map
       </p>
       <p className="mt-0.5 text-[11px]" style={{ color: P.mutedText }}>
         Each tile shows footprint intensity for that day
       </p>
-      <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2" role="grid" aria-label="Monthly calendar">
+      <div className="mt-4 grid min-w-0 grid-cols-7 gap-1 sm:gap-1.5 md:gap-2" role="grid" aria-label="Monthly calendar">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
-          <div key={label} className="text-center text-[10px] font-semibold" style={{ color: P.faintText }}>
-            {label}
+          <div key={label} className="truncate text-center text-[9px] font-semibold sm:text-[10px]" style={{ color: P.faintText }}>
+            <span className="sm:hidden">{label.charAt(0)}</span>
+            <span className="hidden sm:inline">{label}</span>
           </div>
         ))}
         {Array.from({ length: leadingEmpty }).map((_, index) => (
@@ -496,7 +493,7 @@ function MonthStatsRow({ summary }: { summary: HistoryPeriodSummary }) {
   ].filter(Boolean) as Array<{ label: string; value: string; helper: string }>;
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid w-full min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => (
         <div key={item.label} className="rounded-2xl border px-3 py-2.5" style={{ borderColor: P.border, background: "rgba(255,255,255,0.5)" }}>
           <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: P.faintText }}>
@@ -558,7 +555,7 @@ function YearMonthCard({ month }: { month: ReturnType<typeof aggregateHistoryFor
 
 function CategoryBreakdownCard({ summary }: { summary: HistoryPeriodSummary }) {
   return (
-    <article className="rounded-[1.25rem] border p-4" style={{ borderColor: P.border, background: P.card }}>
+    <article className="w-full min-w-0 rounded-[1.25rem] border p-4" style={{ borderColor: P.border, background: P.card }}>
       <h2 className="text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
         Category Breakdown
       </h2>
@@ -601,14 +598,22 @@ function CategoryBreakdownCard({ summary }: { summary: HistoryPeriodSummary }) {
 
 function PandaInsightsCard({
   insights,
+  pandaAnalysis,
   onAskPanda,
 }: {
   insights: Array<{ id: string; text: string }>;
+  pandaAnalysis: PandaAnalysisState;
   onAskPanda: () => void;
 }) {
+  const displayedInsights =
+    pandaAnalysis.status === "ready"
+      ? pandaAnalysis.insights.map((text, index) => ({ id: `panda-${index}`, text }))
+      : insights;
+  const loading = pandaAnalysis.status === "loading";
+
   return (
     <article
-      className="rounded-[1.25rem] border p-4"
+      className="w-full min-w-0 rounded-[1.25rem] border p-4"
       style={{
         background: "linear-gradient(145deg, rgba(228,239,231,0.92), rgba(253,250,244,0.94))",
         borderColor: `${P.green}22`,
@@ -617,21 +622,36 @@ function PandaInsightsCard({
       <h2 className="text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
         🐼 Panda Insights
       </h2>
+      {pandaAnalysis.status === "ready" ? (
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: P.green }}>
+          {pandaAnalysis.source === "ai" ? "Panda analysis" : "Panda summary (offline)"}
+        </p>
+      ) : null}
       <ul className="mt-4 space-y-2.5">
-        {insights.map((insight) => (
+        {displayedInsights.map((insight) => (
           <li key={insight.id} className="text-xs leading-relaxed" style={{ color: P.mutedText }}>
             {insight.text}
           </li>
         ))}
       </ul>
+      {pandaAnalysis.status === "error" ? (
+        <p className="mt-3 text-xs" style={{ color: "#9a3412" }}>
+          {pandaAnalysis.message}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={onAskPanda}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        disabled={loading}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-70"
         style={{ background: "rgba(253,250,244,0.85)", borderColor: `${P.green}30`, color: P.charcoal, outlineColor: P.green }}
       >
         <Sparkles size={14} style={{ color: P.green }} aria-hidden="true" />
-        Ask Panda about this period
+        {loading
+          ? "Panda is reviewing this period..."
+          : pandaAnalysis.status === "ready"
+            ? "Refresh Panda analysis"
+            : "Ask Panda about this period"}
       </button>
     </article>
   );
@@ -640,16 +660,18 @@ function PandaInsightsCard({
 function HistorySidebar({
   summary,
   insights,
+  pandaAnalysis,
   onAskPanda,
 }: {
   summary: HistoryPeriodSummary;
   insights: Array<{ id: string; text: string }>;
+  pandaAnalysis: PandaAnalysisState;
   onAskPanda: () => void;
 }) {
   return (
-    <aside className="flex min-w-0 flex-col gap-4">
+    <aside className="flex w-full min-w-0 flex-col gap-4">
       <CategoryBreakdownCard summary={summary} />
-      <PandaInsightsCard insights={insights} onAskPanda={onAskPanda} />
+      <PandaInsightsCard insights={insights} pandaAnalysis={pandaAnalysis} onAskPanda={onAskPanda} />
     </aside>
   );
 }
@@ -692,18 +714,18 @@ function HistoryEmptyState() {
 function HistoryDayBanner({ date, onBack }: { date: string; onBack: () => void }) {
   return (
     <div
-      className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.15rem] border px-4 py-3"
+      className="mb-4 flex min-w-0 flex-col gap-3 rounded-[1.15rem] border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
       style={{ borderColor: P.border, background: "rgba(255,255,255,0.72)" }}
     >
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: P.faintText }}>
           Carbon History
         </p>
-        <p className="text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
+        <p className="truncate text-sm font-bold" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
           {formatViewDateLabel(date)}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
         <button
           type="button"
           onClick={onBack}
@@ -730,20 +752,11 @@ function formatDayShort(dateKey: string): string {
 
 export function HistoryPage() {
   const { state, todayDate } = useGuest();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedDate = parseOptionalDateSearchParam(searchParams.get("date"));
   const [view, setView] = useState<HistoryView>("week");
   const [anchor, setAnchor] = useState(() => new Date());
-  const [pandaPromptRequest, setPandaPromptRequest] = useState<{ id: number; text: string } | null>(null);
-
-  useEffect(() => {
-    const prompt = (location.state as { pandaPrompt?: string } | null)?.pandaPrompt;
-    if (!prompt?.trim() || !selectedDate) return;
-    setPandaPromptRequest({ id: Date.now(), text: prompt });
-    navigate({ pathname: "/history", search: `?date=${selectedDate}` }, { replace: true, state: null });
-  }, [location.state, navigate, selectedDate]);
+  const [pandaAnalysis, setPandaAnalysis] = useState<PandaAnalysisState>({ status: "idle" });
 
   const hasHistory = useMemo(() => hasAnyHistory(state), [state]);
 
@@ -763,10 +776,28 @@ export function HistoryPage() {
     return buildHistoryInsights(periodSummary, view);
   }, [periodSummary, view, yearSummary]);
 
-  const handleAskPanda = () => {
-    const prompt = buildPandaHistoryPrompt(view, rangeLabelForView(view, anchor));
-    navigate(`/history?date=${todayDate}`, { state: { pandaPrompt: prompt } });
-  };
+  useEffect(() => {
+    setPandaAnalysis({ status: "idle" });
+  }, [view, periodSummary.periodStart, periodSummary.periodEnd]);
+
+  const handleAskPanda = useCallback(async () => {
+    if (!state.profile) return;
+    setPandaAnalysis({ status: "loading" });
+    try {
+      const result = await analyzeHistoryPeriod({
+        summary: periodSummary,
+        view,
+        profile: state.profile,
+        yearSummary,
+      });
+      setPandaAnalysis({ status: "ready", insights: result.insights, source: result.source });
+    } catch (error) {
+      setPandaAnalysis({
+        status: "error",
+        message: error instanceof Error ? error.message : "Panda could not analyze this period.",
+      });
+    }
+  }, [periodSummary, state.profile, view, yearSummary]);
 
   const handleSelectDay = (snapshot: HistoryDaySnapshot) => {
     setSearchParams({ date: snapshot.date });
@@ -776,7 +807,6 @@ export function HistoryPage() {
     return (
       <DailyTrailView
         viewDate={selectedDate}
-        promptRequest={pandaPromptRequest}
         onDateChange={(date) => setSearchParams({ date })}
         headerBanner={
           <HistoryDayBanner date={selectedDate} onBack={() => setSearchParams({})} />
@@ -787,15 +817,18 @@ export function HistoryPage() {
 
   if (!hasHistory) {
     return (
-      <div className={HISTORY_PAGE_SHELL}>
-        <HistoryHeader view={view} onViewChange={setView} />
-        <HistoryEmptyState />
+      <div className={HISTORY_PAGE_FRAME}>
+        <div className={HISTORY_PAGE_SHELL}>
+          <HistoryHeader view={view} onViewChange={setView} />
+          <HistoryEmptyState />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={HISTORY_PAGE_SHELL}>
+    <div className={HISTORY_PAGE_FRAME}>
+      <div className={HISTORY_PAGE_SHELL}>
       <HistoryHeader view={view} onViewChange={setView} />
 
       <DateNavigation
@@ -805,7 +838,7 @@ export function HistoryPage() {
         onNext={() => setAnchor((current) => shiftAnchor(view, current, 1))}
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Period summary metrics">
+      <section className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Period summary metrics">
         <SummaryCard
           title="Total Created"
           value={`${periodSummary.totalCreatedKg.toFixed(1)} kg CO₂`}
@@ -840,40 +873,62 @@ export function HistoryPage() {
         <>
           <WeekDayCards snapshots={periodSummary.daySnapshots} todayDate={todayDate} onSelect={handleSelectDay} />
           <div className={DASHBOARD_GRID}>
-            <div className="flex min-w-0 flex-col xl:h-full">
+            <div className="order-1 w-full min-w-0 xl:col-start-2 xl:row-start-1">
+              <HistorySidebar
+                summary={periodSummary}
+                insights={insights}
+                pandaAnalysis={pandaAnalysis}
+                onAskPanda={handleAskPanda}
+              />
+            </div>
+            <div className="order-2 w-full min-w-0 xl:col-start-1 xl:row-start-1">
               <WeekTrendChart summary={periodSummary} />
             </div>
-            <HistorySidebar summary={periodSummary} insights={insights} onAskPanda={handleAskPanda} />
           </div>
         </>
       ) : null}
 
       {view === "month" ? (
         <>
-          <section aria-label="Monthly history">
+          <section className="w-full min-w-0" aria-label="Monthly history">
             <MonthCalendar summary={periodSummary} onSelectDay={handleSelectDay} />
           </section>
           <div className={DASHBOARD_GRID}>
-            <div className="min-w-0">
+            <div className="order-1 w-full min-w-0 xl:col-start-2 xl:row-start-1">
+              <HistorySidebar
+                summary={periodSummary}
+                insights={insights}
+                pandaAnalysis={pandaAnalysis}
+                onAskPanda={handleAskPanda}
+              />
+            </div>
+            <div className="order-2 w-full min-w-0 xl:col-start-1 xl:row-start-1">
               <MonthStatsRow summary={periodSummary} />
             </div>
-            <HistorySidebar summary={periodSummary} insights={insights} onAskPanda={handleAskPanda} />
           </div>
         </>
       ) : null}
 
       {view === "year" && yearSummary ? (
         <>
-          <section className="space-y-4" aria-label="Yearly history">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="w-full min-w-0 space-y-4" aria-label="Yearly history">
+            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {yearSummary.months.map((month) => (
                 <YearMonthCard key={month.monthIndex} month={month} />
               ))}
             </div>
           </section>
           <div className={DASHBOARD_GRID}>
-            <div className="min-w-0">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="order-1 w-full min-w-0 xl:col-start-2 xl:row-start-1">
+              <HistorySidebar
+                summary={periodSummary}
+                insights={insights}
+                pandaAnalysis={pandaAnalysis}
+                onAskPanda={handleAskPanda}
+              />
+            </div>
+            <div className="order-2 w-full min-w-0 xl:col-start-1 xl:row-start-1">
+              <div className="grid w-full min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {yearSummary.bestMonth ? (
                   <div className="rounded-2xl border px-3 py-2.5" style={{ borderColor: P.border }}>
                     <p className="text-[11px] font-semibold uppercase" style={{ color: P.faintText }}>
@@ -912,18 +967,18 @@ export function HistoryPage() {
                 </div>
               </div>
             </div>
-            <HistorySidebar summary={periodSummary} insights={insights} onAskPanda={handleAskPanda} />
           </div>
         </>
       ) : null}
+      </div>
     </div>
   );
 }
 
 function HistoryHeader({ view, onViewChange }: { view: HistoryView; onViewChange: (view: HistoryView) => void }) {
   return (
-    <header className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div className="min-w-0 flex-1">
+    <header className="flex w-full min-w-0 flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="hidden min-w-0 flex-1 lg:block">
         <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl" style={{ color: P.charcoal, fontFamily: DISPLAY_FONT }}>
           Carbon History
         </h1>
@@ -934,9 +989,12 @@ function HistoryHeader({ view, onViewChange }: { view: HistoryView; onViewChange
           Panda turns your past days into patterns you can actually understand.
         </p>
       </div>
-      <div className="shrink-0 self-start lg:self-end">
+      <div className="min-w-0 w-full lg:w-auto lg:shrink-0">
         <ViewSwitcher view={view} onChange={onViewChange} />
       </div>
+      <p className="text-sm leading-relaxed lg:hidden" style={{ color: P.mutedText }}>
+        See how your footprint changes across weeks, months, and years.
+      </p>
     </header>
   );
 }

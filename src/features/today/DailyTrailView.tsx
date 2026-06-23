@@ -66,7 +66,8 @@ export function DailyTrailView({
       const updated = {
         ...activeDay,
         activities: activeDay.activities.map((activity) =>
-          activity.id === activityId && activity.status === "estimated_from_profile"
+          activity.id === activityId &&
+          (activity.status === "estimated_from_profile" || activity.status === "parsed_pending")
             ? { ...activity, status: "confirmed" as const, source: "manual_edit" as const }
             : activity,
         ),
@@ -188,6 +189,7 @@ export function DailyTrailView({
         onClose={() => setSelectedCheckpointId(null)}
         onSave={saveCheckpointEvent}
         onDelete={deleteCheckpointEvent}
+        onConfirm={confirmActivity}
         onMarkEmpty={markCheckpointEmpty}
         onTypeWithPanda={typeWithPanda}
       />

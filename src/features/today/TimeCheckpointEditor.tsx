@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ActivityEntry } from "@/types";
 import type { TimeCheckpoint } from "@/features/today/dailyRingModel";
+import { isEstimatedActivity, isPredictedActivity, needsActivityConfirmation } from "@/features/today/dailyRingModel";
+import type { DataStatus } from "@/types";
 import { checkpointEditorCopy } from "@/features/today/checkpointEditorConfig";
 import { formatTimeWindow } from "@/features/today/timeCheckpoints";
 import type { EditableEventType, TimeCheckpointEventInput } from "@/features/today/timeCheckpointActions";
 import { SUBTYPE_OPTIONS } from "@/ai/categoryDetailSchema";
 import { formatActivityTypeLine, getActivityEmoji } from "@/features/today/todayHelpers";
 import { PRIMARY_CATEGORY_LABELS } from "@/logic/categoryScoring";
+import { StatusBadge } from "@/components/cards/StatusBadge";
 import { P } from "@/theme/palette";
 
 const DISPLAY_FONT = "Plus Jakarta Sans, sans-serif";
@@ -40,6 +43,7 @@ type TimeCheckpointEditorProps = {
   onClose: () => void;
   onSave: (input: TimeCheckpointEventInput) => void;
   onDelete: (activityId: string) => void;
+  onConfirm: (activityId: string) => void;
   onMarkEmpty: () => void;
   onTypeWithPanda: (text: string) => void;
 };
@@ -78,11 +82,183 @@ function splitCategories(recommendedIds: EditableEventType[]) {
   return { recommended, other };
 }
 
+function formatDetailDisplayValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "—";
+  return String(value).replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+const INTERNAL_DETAIL_KEYS = new Set([
+  "checkpointId",
+  "timeCheckpointId",
+  "eventTime",
+  "loggedTime",
+  "timeWindowStart",
+  "timeWindowEnd",
+  "eventType",
+  "nothingToLog",
+  "estimatedFromProfile",
+  "isLiveLog",
+  "fragmentText",
+  "followUp",
+  "rawAiCategory",
+  "categoryScore",
+  "scoreMeaning",
+  "greenScore",
+  "dominantImpact",
+  "parentBundleId",
+  "includedInParentContext",
+  "timeSlot",
+  "assumedSameAsMorning",
+  "location",
+  "travelMode",
+  "travelDistanceKm",
+]);
+
+const DETAIL_ROW_KEYS = new Set([
+  "subcategory",
+  "mode",
+  "distanceKm",
+  "purpose",
+  "usualRoute",
+  "mealSource",
+  "foodType",
+  "fulfillment",
+  "durationHours",
+  "extraAcHours",
+  "acHours",
+  "energyLevel",
+  "cookingMethod",
+  "workMode",
+  "deviceUsageLevel",
+  "purchaseType",
+  "itemCondition",
+  "purchaseChannel",
+  "deliveryType",
+  "packaging",
+  "deliverySpeed",
+  "wasteType",
+  "wasteHandling",
+  "waterTemperature",
+  "usageLevel",
+  "deviceType",
+  "powerIntensity",
+  "flightScope",
+  "personalCareType",
+  "hotWater",
+  "choreType",
+  "cleaningProducts",
+  "avoidedActionType",
+  "replacedAction",
+  "avoidedImpactEstimate",
+  "note",
+]);
+
+function getEventDetailDisplayRows(
+  activity: ActivityEntry,
+  eventType: EditableEventType,
+): Array<{ label: string; value: string }> {
+  const details = activity.details;
+  const rows: Array<{ label: string; value: string }> = [
+    {
+      label: "Category",
+      value: EVENT_TYPES.find((type) => type.id === eventType)?.label ?? PRIMARY_CATEGORY_LABELS[eventType],
+    },
+    { label: "Label", value: activity.label },
+  ];
+
+  const push = (label: string, value: unknown) => {
+    rows.push({ label, value: formatDetailDisplayValue(value) });
+  };
+
+  if (eventType === "transportation") {
+    push("Travel mode", details.mode);
+    push("Distance km", details.distanceKm);
+    push("Purpose", details.purpose);
+    push("Usual route", details.usualRoute);
+  } else if (eventType === "food_meals") {
+    push("Meal type", details.subcategory);
+    push("Meal source", details.mealSource);
+    push("Food type", details.foodType);
+    if (details.mealSource === "ordered_online" || details.mealSource === "restaurant") {
+      push("Delivery / pickup", details.fulfillment);
+    }
+  } else if (eventType === "home_energy") {
+    push("Energy type", details.subcategory);
+    push("Duration (hours)", details.durationHours ?? details.extraAcHours ?? details.acHours);
+    push("Usage level", details.energyLevel);
+  } else if (eventType === "cooking_energy") {
+    push("Cooking method", details.cookingMethod);
+    push("Cooking time (hours)", details.durationHours);
+  } else if (eventType === "work_study") {
+    push("Location / type", details.workMode);
+    push("Device usage level", details.deviceUsageLevel);
+    if (details.durationHours !== undefined) push("Duration (hours)", details.durationHours);
+  } else if (eventType === "shopping_purchases") {
+    push("Purchase type", details.purchaseType);
+    push("Condition", details.itemCondition);
+    push("Channel", details.purchaseChannel);
+  } else if (eventType === "delivery_online_orders") {
+    push("Delivery type", details.deliveryType);
+    push("Packaging level", details.packaging);
+    push("Speed", details.deliverySpeed);
+  } else if (eventType === "waste_recycling") {
+    push("Waste type", details.wasteType);
+    push("Handling", details.wasteHandling);
+  } else if (eventType === "water_hot_water") {
+    push("Activity type", details.subcategory);
+    push("Hot / cold", details.waterTemperature);
+    push("Duration (hours)", details.durationHours);
+    push("Usage level", details.usageLevel);
+  } else if (eventType === "digital_devices") {
+    push("Device / activity", details.deviceType);
+    push("Duration (hours)", details.durationHours);
+    push("Power intensity", details.powerIntensity);
+  } else if (eventType === "travel_trips") {
+    push("Mode", details.mode);
+    push("Trip type", details.subcategory);
+    push("Distance km", details.distanceKm);
+    if (details.mode === "flight") push("Flight scope", details.flightScope);
+  } else if (eventType === "personal_care") {
+    push("Care type", details.personalCareType);
+    push("Hot water", details.hotWater);
+  } else if (eventType === "household_chores") {
+    push("Chore type", details.choreType);
+    push("Products used", details.cleaningProducts);
+  } else if (eventType === "social_leisure") {
+    push("Activity type", details.subcategory);
+    push("Travel mode", details.mode);
+  } else if (eventType === "positive_avoided_actions") {
+    push("Avoided action", details.avoidedActionType);
+    push("What it replaced", details.replacedAction);
+    push("Estimated avoided impact", details.avoidedImpactEstimate ?? details.greenScore);
+  } else if (details.note) {
+    push("Notes", details.note);
+  }
+
+  for (const [key, value] of Object.entries(details)) {
+    if (DETAIL_ROW_KEYS.has(key) || INTERNAL_DETAIL_KEYS.has(key)) continue;
+    if (value === null || value === undefined || value === "") continue;
+    if (typeof value === "object") continue;
+    rows.push({ label: formatDetailDisplayValue(key), value: formatDetailDisplayValue(value) });
+  }
+
+  return rows;
+}
+
+function confirmationBadgeStatus(activity: ActivityEntry): DataStatus | null {
+  if (isPredictedActivity(activity)) return "parsed_pending";
+  if (isEstimatedActivity(activity)) return "estimated_from_profile";
+  return null;
+}
+
 export function TimeCheckpointEditor({
   checkpoint,
   onClose,
   onSave,
   onDelete,
+  onConfirm,
   onMarkEmpty,
   onTypeWithPanda,
 }: TimeCheckpointEditorProps) {
@@ -94,6 +270,7 @@ export function TimeCheckpointEditor({
   const [details, setDetails] = useState<Record<string, unknown>>({});
   const [pandaText, setPandaText] = useState("");
   const [showOtherCategories, setShowOtherCategories] = useState(false);
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     const checkpointId = checkpoint?.id;
@@ -115,6 +292,7 @@ export function TimeCheckpointEditor({
     setDetails({ subcategory: defaultSubtype(defaultType) });
     setPandaText("");
     setShowOtherCategories(false);
+    setViewingId(null);
   }, [checkpoint]);
 
   useEffect(() => {
@@ -145,12 +323,20 @@ export function TimeCheckpointEditor({
 
   const startEdit = (activity: ActivityEntry) => {
     const nextType = inferEventType(activity);
+    setViewingId(null);
     setEditing(activity);
     setEventType(nextType);
     setShowOtherCategories(!checkpointCopy.recommendedCategoryIds.includes(nextType));
     setLabel(activity.label);
     setDetails(activity.details);
   };
+
+  const toggleView = (activity: ActivityEntry) => {
+    setEditing(null);
+    setViewingId((current) => (current === activity.id ? null : activity.id));
+  };
+
+  const viewingActivity = viewingId ? checkpoint.events.find((activity) => activity.id === viewingId) ?? null : null;
 
   const selectCategory = (typeId: EditableEventType) => {
     setEventType(typeId);
@@ -180,6 +366,7 @@ export function TimeCheckpointEditor({
       details: nextDetails,
     });
     setEditing(null);
+    setViewingId(null);
     const defaultType = defaultEventTypeForCheckpoint(checkpoint);
     setEventType(defaultType);
     setLabel("");
@@ -230,8 +417,14 @@ export function TimeCheckpointEditor({
           <ExistingEventsSection
             checkpoint={checkpoint}
             className="order-4 lg:order-none lg:col-start-1 lg:row-start-1"
+            viewingId={viewingId}
+            onToggleView={toggleView}
             onEdit={startEdit}
-            onDelete={onDelete}
+            onDelete={(activityId) => {
+              setViewingId((current) => (current === activityId ? null : current));
+              onDelete(activityId);
+            }}
+            onConfirm={onConfirm}
             onMarkEmpty={onMarkEmpty}
           />
 
@@ -248,6 +441,7 @@ export function TimeCheckpointEditor({
             className="order-3 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2"
             checkpointLabel={checkpoint.label}
             editing={editing}
+            viewing={viewingActivity}
             eventType={eventType}
             label={label}
             details={details}
@@ -270,14 +464,20 @@ export function TimeCheckpointEditor({
 function ExistingEventsSection({
   checkpoint,
   className,
+  viewingId,
+  onToggleView,
   onEdit,
   onDelete,
+  onConfirm,
   onMarkEmpty,
 }: {
   checkpoint: TimeCheckpoint;
   className?: string;
+  viewingId: string | null;
+  onToggleView: (activity: ActivityEntry) => void;
   onEdit: (activity: ActivityEntry) => void;
   onDelete: (activityId: string) => void;
+  onConfirm: (activityId: string) => void;
   onMarkEmpty: () => void;
 }) {
   return (
@@ -285,15 +485,39 @@ function ExistingEventsSection({
       <p className="text-sm font-bold" style={{ color: P.charcoal }}>
         Existing events
       </p>
+      <p className="mt-1 text-[11px]" style={{ color: P.faintText }}>
+        Select an event to view its saved details on the right.
+      </p>
       {checkpoint.events.length > 0 ? (
         <ul className="mt-3 space-y-2">
-          {checkpoint.events.map((activity) => (
-            <li key={activity.id} className="rounded-xl border p-3 text-xs" style={{ borderColor: P.border, background: "rgba(255,255,255,0.82)" }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold" style={{ color: P.charcoal }}>
-                    <span aria-hidden="true">{getActivityEmoji(activity)} </span>
-                    {activity.label}
+          {checkpoint.events.map((activity) => {
+            const selected = viewingId === activity.id;
+            const badgeStatus = confirmationBadgeStatus(activity);
+            const showConfirm = needsActivityConfirmation(activity);
+
+            return (
+            <li
+              key={activity.id}
+              className="rounded-xl border text-xs"
+              style={{
+                borderColor: selected ? P.green : P.border,
+                background: "rgba(255,255,255,0.82)",
+                boxShadow: selected ? `inset 0 0 0 1px ${P.green}` : undefined,
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 p-3">
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onToggleView(activity)}
+                  className={`min-w-0 flex-1 rounded-lg text-left ${FOCUS_RING}`}
+                >
+                  <p className="flex flex-wrap items-center gap-2 font-semibold" style={{ color: P.charcoal }}>
+                    <span>
+                      <span aria-hidden="true">{getActivityEmoji(activity)} </span>
+                      {activity.label}
+                    </span>
+                    {badgeStatus ? <StatusBadge status={badgeStatus} /> : null}
                   </p>
                   <p className="mt-0.5" style={{ color: P.mutedText }}>
                     {formatActivityTypeLine(activity)}
@@ -301,42 +525,57 @@ function ExistingEventsSection({
                   <p className="mt-1 font-semibold" style={{ color: P.green }}>
                     {activity.estimates.co2eKg.toFixed(1)} kg CO₂
                   </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(activity)}
-                    className={`inline-flex h-9 items-center rounded-lg border px-2.5 font-semibold ${FOCUS_RING}`}
-                    style={{ borderColor: P.border, color: P.charcoal }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(activity.id)}
-                    className={`inline-flex h-9 items-center rounded-lg border px-2.5 font-semibold ${FOCUS_RING}`}
-                    style={{ borderColor: "#f0c4c0", color: "#B83428" }}
-                  >
-                    Delete
-                  </button>
+                </button>
+                <div className="flex shrink-0 flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onEdit(activity)}
+                      className={`inline-flex h-9 items-center rounded-lg border px-2.5 font-semibold ${FOCUS_RING}`}
+                      style={{ borderColor: P.border, color: P.charcoal }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(activity.id)}
+                      className={`inline-flex h-9 items-center rounded-lg border px-2.5 font-semibold ${FOCUS_RING}`}
+                      style={{ borderColor: "#f0c4c0", color: "#B83428" }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {showConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => onConfirm(activity.id)}
+                      className={`inline-flex h-9 items-center justify-center rounded-lg px-2.5 text-[11px] font-semibold text-white ${FOCUS_RING}`}
+                      style={{ background: P.green }}
+                    >
+                      Confirm
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
-        <p className="mt-2 text-xs" style={{ color: P.faintText }}>
-          No events yet in this time window.
-        </p>
+        <>
+          <p className="mt-2 text-xs" style={{ color: P.faintText }}>
+            No events yet in this time window.
+          </p>
+          <button
+            type="button"
+            onClick={onMarkEmpty}
+            className={`mt-3 inline-flex h-9 items-center rounded-lg border px-3 text-[11px] font-semibold ${FOCUS_RING}`}
+            style={{ borderColor: P.border, color: P.mutedText, background: "rgba(255,255,255,0.72)" }}
+          >
+            Nothing to log for this checkpoint.
+          </button>
+        </>
       )}
-      <button
-        type="button"
-        onClick={onMarkEmpty}
-        className={`mt-3 inline-flex h-9 items-center rounded-lg border px-3 text-[11px] font-semibold ${FOCUS_RING}`}
-        style={{ borderColor: P.border, color: P.mutedText, background: "rgba(255,255,255,0.72)" }}
-      >
-        Nothing to log for this slot
-      </button>
     </section>
   );
 }
@@ -384,10 +623,80 @@ function PandaSection({
   );
 }
 
+function ReadOnlyValueField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold" style={{ color: P.charcoal }}>
+        {label}
+      </p>
+      <div
+        className="mt-1 flex min-h-11 items-center rounded-xl border px-3 text-sm"
+        style={{ borderColor: P.border, background: "rgba(255,255,255,0.88)", color: P.charcoal }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function EventDetailsReadOnlyPanel({ activity }: { activity: ActivityEntry }) {
+  const eventType = inferEventType(activity);
+  const category = EVENT_TYPES.find((type) => type.id === eventType);
+  const detailRows = getEventDetailDisplayRows(activity, eventType).filter(
+    (row) => row.label !== "Category" && row.label !== "Label",
+  );
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="rounded-xl border px-3 py-3"
+        style={{ borderColor: `${P.green}44`, background: "rgba(248,252,250,0.88)" }}
+      >
+        <p className="font-semibold" style={{ color: P.charcoal }}>
+          <span aria-hidden="true">{getActivityEmoji(activity)} </span>
+          {activity.label}
+        </p>
+        <p className="mt-0.5 text-xs" style={{ color: P.mutedText }}>
+          {formatActivityTypeLine(activity)}
+        </p>
+        <p className="mt-1 text-xs font-semibold" style={{ color: P.green }}>
+          {activity.estimates.co2eKg.toFixed(1)} kg CO₂
+        </p>
+      </div>
+
+      {category ? (
+        <div>
+          <p className="text-xs font-semibold" style={{ color: P.mutedText }}>
+            Category
+          </p>
+          <div className="mt-2">
+            <span
+              className="inline-flex h-11 items-center rounded-full border px-3 text-[11px] font-semibold"
+              style={{ borderColor: P.green, background: `${P.green}14`, color: P.charcoal }}
+            >
+              <span aria-hidden="true">{category.icon} </span>
+              {category.label}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      <ReadOnlyValueField label="Label" value={activity.label} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {detailRows.map((row) => (
+          <ReadOnlyValueField key={row.label} label={row.label} value={row.value} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ManualFormSection({
   className,
   checkpointLabel,
   editing,
+  viewing,
   eventType,
   label,
   details,
@@ -404,6 +713,7 @@ function ManualFormSection({
   className?: string;
   checkpointLabel: string;
   editing: ActivityEntry | null;
+  viewing: ActivityEntry | null;
   eventType: EditableEventType;
   label: string;
   details: Record<string, unknown>;
@@ -417,17 +727,28 @@ function ManualFormSection({
   onDetailChange: (key: string, value: unknown) => void;
   onSubmit: () => void;
 }) {
+  const isViewMode = Boolean(viewing) && !editing;
+  const sectionTitle = editing ? "Edit event" : isViewMode ? "Event details" : "Add event";
+
   return (
     <section
       className={`${CARD_CLASS} flex min-h-0 flex-col ${className ?? ""} ${
-        showOtherCategories ? "max-h-[min(560px,calc(92vh-10rem))] overflow-hidden lg:max-h-[calc(92vh-10rem)]" : ""
+        !isViewMode && showOtherCategories
+          ? "max-h-[min(560px,calc(92vh-10rem))] overflow-hidden lg:max-h-[calc(92vh-10rem)]"
+          : ""
       }`}
       style={{ borderColor: P.border, background: "rgba(255,255,255,0.58)" }}
     >
       <p className="shrink-0 text-sm font-bold" style={{ color: P.charcoal }}>
-        {editing ? "Edit event" : "Add event"}
+        {sectionTitle}
       </p>
 
+      {isViewMode && viewing ? (
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+          <EventDetailsReadOnlyPanel activity={viewing} />
+        </div>
+      ) : (
+        <>
       <div
         className={`min-h-0 ${showOtherCategories ? "mt-4 flex-1 overflow-y-auto overscroll-contain pr-1" : "mt-4"}`}
       >
@@ -513,6 +834,8 @@ function ManualFormSection({
           Save event
         </button>
       </div>
+        </>
+      )}
     </section>
   );
 }

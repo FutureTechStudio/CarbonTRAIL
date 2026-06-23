@@ -62,7 +62,7 @@ export function formatActivityTypeLine(activity: ActivityEntry): string {
   const details = activity.details;
 
   if (activity.activityType === "nothing_to_log" || details.nothingToLog === true) {
-    return "Nothing to log for this slot";
+    return "Nothing to log for this checkpoint.";
   }
 
   if (activity.category === "transport") {
