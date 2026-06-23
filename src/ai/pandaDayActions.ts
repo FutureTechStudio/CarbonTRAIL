@@ -68,11 +68,15 @@ function mergeActivitiesBySlots(
   incoming: ActivityEntry[],
   slotIds: CheckpointSlotId[],
 ): ActivityEntry[] {
-  const replaceSlots = new Set(slotIds);
-  const kept = existing.filter((activity) => {
-    if (activity.status === "estimated_from_profile") return false;
+  const replaceSlots = new Set(slotIds.filter(Boolean));
+  for (const activity of incoming) {
     const slot = getActivityCheckpointSlot(activity);
-    return !slot || !replaceSlots.has(slot);
+    if (slot) replaceSlots.add(slot);
+  }
+  const kept = existing.filter((activity) => {
+    const slot = getActivityCheckpointSlot(activity);
+    if (slot && replaceSlots.has(slot)) return false;
+    return true;
   });
   return [...kept, ...incoming];
 }

@@ -7,6 +7,7 @@ import { extractJsonFromAiText, normalizePandaAiPayload } from "@/ai/pandaRespon
 import { inferStatusFromProbability } from "@/ai/behaviorProbability";
 import { applyFollowUpReplyToPendingParse, applyPandaParseToDay } from "@/ai/pandaDayActions";
 import { awardPoints } from "@/logic/leafPoints";
+import { estimateDayFromProfile } from "@/logic/routineEstimator";
 import type { PandaParseResult, PandaProcessingStep } from "@/ai/pandaSchemas";
 
 function contextAt(hour: number, minute = 0) {
@@ -561,6 +562,42 @@ describe("panda follow-up logging", () => {
     expect(day.activities[0].details.destination).toBe("London");
     expect(day.activities[0].details.distanceKm).toBeGreaterThan(6000);
     expect(day.activities[0].estimates.co2eKg).toBeGreaterThan(1000);
+  });
+
+  it("keeps Carbon Memory estimates in other slots when logging one manual event", () => {
+    const estimatedDay = estimateDayFromProfile(demoGuestProfile, "2025-06-17");
+    expect(estimatedDay.activities.every((a) => a.status === "estimated_from_profile")).toBe(true);
+
+    const parse: PandaParseResult = {
+      detectedIntent: "live_log",
+      detectedSlotId: "lunch",
+      detectedTime: "13:00",
+      assistantMessage: "Logged lunch.",
+      extractedActivities: [
+        {
+          category: "food",
+          activityType: "lunch",
+          label: "Ordered chicken biryani",
+          timeSlot: "lunch",
+          details: { mealSource: "ordered_online", foodType: "chicken_fish" },
+          confidence: 0.9,
+          status: "confirmed",
+        },
+      ],
+      missingFields: [],
+      followUpQuestion: null,
+      quickReplies: [],
+      suggestedProfileUpdate: null,
+      confidence: 0.9,
+      originalText: "I ordered chicken biryani for lunch",
+      usedGemini: false,
+    };
+
+    const { day } = applyPandaParseToDay(estimatedDay, demoGuestProfile, "2025-06-17", parse, []);
+
+    expect(day.activities.filter((a) => a.status === "estimated_from_profile")).toHaveLength(4);
+    expect(day.activities.some((a) => a.status === "confirmed" && a.label === "Ordered chicken biryani")).toBe(true);
+    expect(day.activities.filter((a) => a.label === "Lunch")).toHaveLength(0);
   });
 });
 
