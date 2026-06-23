@@ -24,9 +24,13 @@ export function AppShell({ children }: { children?: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden" style={{ background: P.cream }}>
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden" style={{ background: P.cream }}>
       <SidebarNav collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
-      <div className="flex min-h-screen min-w-0 w-full max-w-full flex-1 flex-col">
+      <div
+        className={`flex min-h-screen min-w-0 w-full max-w-full flex-col transition-[padding] duration-200 ease-out ${
+          sidebarCollapsed ? "lg:pl-[4.75rem]" : "lg:pl-64"
+        }`}
+      >
         <TopHeader />
         <main className="min-w-0 w-full max-w-full flex-1 overflow-x-hidden pb-20 lg:pb-6">
           {children ?? <Outlet />}

@@ -24,11 +24,11 @@ import {
   buildYearInsights,
 } from "@/features/history/historyInsights";
 import { getDailyFootprintLevel } from "@/logic/dailyFootprintLevel";
-import { P } from "@/theme/palette";
+import { P, PAGE_SHELL } from "@/theme/palette";
 
 const DISPLAY_FONT = "Plus Jakarta Sans, sans-serif";
 const HISTORY_PAGE_SHELL =
-  "mx-auto w-full min-w-0 max-w-full space-y-4 px-4 pb-24 pt-4 lg:max-w-[1440px] lg:px-6 lg:pb-8";
+  `${PAGE_SHELL} min-w-0 space-y-4 px-4 pb-24 pt-4 lg:px-6 lg:pb-8`;
 const DASHBOARD_GRID =
   "grid w-full min-w-0 max-w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.75fr)] xl:items-stretch";
 const HISTORY_PAGE_FRAME = "relative min-h-full w-full min-w-0 max-w-full overflow-x-hidden";

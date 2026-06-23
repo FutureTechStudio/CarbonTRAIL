@@ -17,7 +17,7 @@ type SidebarNavProps = {
 export function SidebarNav({ collapsed, onToggle }: SidebarNavProps) {
   return (
     <aside
-      className={`sticky top-0 z-40 hidden h-screen shrink-0 flex-col transition-[width] duration-200 ease-out lg:flex ${
+      className={`fixed inset-y-0 left-0 z-40 hidden h-screen flex-col transition-[width] duration-200 ease-out lg:flex ${
         collapsed ? "w-[4.75rem]" : "w-64"
       }`}
       style={{ background: P.charcoal }}
@@ -25,7 +25,7 @@ export function SidebarNav({ collapsed, onToggle }: SidebarNavProps) {
     >
       <SidebarToggleButton collapsed={collapsed} onToggle={onToggle} variant="edge" />
 
-      <div className={`flex items-center ${collapsed ? "justify-center p-3 pt-5" : "gap-2 p-5"}`}>
+      <div className={`shrink-0 flex items-center ${collapsed ? "justify-center p-3 pt-5" : "gap-2 p-5"}`}>
         <div className={`flex items-center ${collapsed ? "" : "gap-2"}`}>
           <CarbonTrailLogo size={collapsed ? "sm" : "md"} />
           {!collapsed ? (
